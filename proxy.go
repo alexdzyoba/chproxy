@@ -281,10 +281,8 @@ func (rp *reverseProxy) serveFromCache(s *scope, srw *statResponseWriter, req *h
 		return
 	}
 	if err != cache.ErrMissing {
-		// Unexpected error while serving the response.
+		// Unexpected error while serving the response, proxy to clickhouse
 		err = fmt.Errorf("%s: %s; query: %q", s, err, q)
-		respondWith(srw, err, http.StatusInternalServerError)
-		return
 	}
 
 	// The response wasn't found in the cache.
@@ -294,8 +292,6 @@ func (rp *reverseProxy) serveFromCache(s *scope, srw *statResponseWriter, req *h
 	crw, err := s.user.cache.NewResponseWriter(srw, key)
 	if err != nil {
 		err = fmt.Errorf("%s: %s; query: %q", s, err, q)
-		respondWith(srw, err, http.StatusInternalServerError)
-		return
 	}
 	rp.proxyRequest(s, crw, srw, req)
 
