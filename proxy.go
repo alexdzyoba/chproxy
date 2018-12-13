@@ -197,9 +197,6 @@ func (rp *reverseProxy) proxyRequest(s *scope, rw http.ResponseWriter, srw *stat
 
 		q := getQuerySnippet(req)
 		log.Debugf("%s: remote client closed the connection in %s; query: %q", s, time.Since(startTime), q)
-		if err := s.killQuery(); err != nil {
-			log.Errorf("%s: cannot kill query: %s; query: %q", s, err, q)
-		}
 		srw.statusCode = 499 // See https://httpstatuses.com/499 .
 
 	case context.DeadlineExceeded:
@@ -210,9 +207,6 @@ func (rp *reverseProxy) proxyRequest(s *scope, rw http.ResponseWriter, srw *stat
 
 		q := getQuerySnippet(req)
 		log.Debugf("%s: query timeout in %s; query: %q", s, time.Since(startTime), q)
-		if err := s.killQuery(); err != nil {
-			log.Errorf("%s: cannot kill query: %s; query: %q", s, err, q)
-		}
 		err = fmt.Errorf("%s: %s; query: %q", s, timeoutErrMsg, q)
 		respondWith(rw, err, http.StatusGatewayTimeout)
 		srw.statusCode = http.StatusGatewayTimeout
