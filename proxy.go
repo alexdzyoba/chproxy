@@ -283,8 +283,7 @@ func (rp *reverseProxy) serveFromCache(s *scope, srw *statResponseWriter, req *h
 	if err != cache.ErrMissing {
 		// Unexpected error while serving the response.
 		err = fmt.Errorf("%s: %s; query: %q", s, err, q)
-		respondWith(srw, err, http.StatusInternalServerError)
-		return
+		log.ErrorWithCallDepth(err, 1)
 	}
 
 	// The response wasn't found in the cache.
