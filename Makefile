@@ -1,7 +1,6 @@
 pkgs = $(shell go list ./...)
 gofiles := $(shell find . -name "*.go" -type f -not -path "./vendor/*")
 
-
 BUILD_TAG = $(shell git tag --points-at HEAD)
 
 BUILD_CONSTS = \

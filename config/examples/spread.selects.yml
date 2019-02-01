@@ -2,9 +2,6 @@ server:
   http:
       listen_addr: ":9090"
 
-      # Networks with reporting servers.
-      allowed_networks: ["10.10.2.0/24"]
-
 users:
   - name: "report"
     to_cluster: "stats-aggregate"

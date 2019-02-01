@@ -2,12 +2,10 @@ package main
 
 import (
 	"bytes"
-	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"math/rand"
-	"net"
 	"regexp"
 	"strings"
 	"sync"
@@ -18,14 +16,13 @@ import (
 	"net/http/httptest"
 	"net/url"
 
-	"github.com/Vertamedia/chproxy/config"
+	"github.com/alexdzyoba/chproxy/config"
 )
 
 var goodCfg = &config.Config{
 	Clusters: []config.Cluster{
 		{
-			Name:   "cluster",
-			Scheme: "http",
+			Name: "cluster",
 			Replicas: []config.Replica{
 				{
 					Nodes: []string{"localhost:8123"},
@@ -83,9 +80,8 @@ func TestNewReverseProxy(t *testing.T) {
 var badCfg = &config.Config{
 	Clusters: []config.Cluster{
 		{
-			Name:   "badCfg",
-			Scheme: "http",
-			Nodes:  []string{"localhost:8123"},
+			Name:  "badCfg",
+			Nodes: []string{"localhost:8123"},
 			ClusterUsers: []config.ClusterUser{
 				{
 					Name: "default",
@@ -119,9 +115,8 @@ func TestApplyConfig(t *testing.T) {
 var authCfg = &config.Config{
 	Clusters: []config.Cluster{
 		{
-			Name:   "cluster",
-			Scheme: "http",
-			Nodes:  []string{"localhost:8123"},
+			Name:  "cluster",
+			Nodes: []string{"localhost:8123"},
 			ClusterUsers: []config.ClusterUser{
 				{
 					Name:     "web",
@@ -251,22 +246,6 @@ func TestReverseProxy_ServeHTTP1(t *testing.T) {
 				go makeHeavyRequest(p, time.Millisecond*20)
 				time.Sleep(time.Millisecond * 5)
 				return makeHeavyRequest(p, time.Millisecond*20)
-			},
-		},
-		{
-			cfg:           authCfg,
-			name:          "disallow https",
-			expResponse:   "user \"foo\" is not allowed to access via https",
-			expStatusCode: http.StatusForbidden,
-			f: func(p *reverseProxy) *http.Response {
-				p.users["foo"].denyHTTPS = true
-				req := httptest.NewRequest("POST", fakeServer.URL, nil)
-				req.SetBasicAuth("foo", "bar")
-				req.TLS = &tls.ConnectionState{
-					Version:           tls.VersionTLS12,
-					HandshakeComplete: true,
-				}
-				return makeCustomRequest(p, req)
 			},
 		},
 		{
@@ -492,89 +471,6 @@ func TestReverseProxy_ServeHTTPConcurrent(t *testing.T) {
 			t.Fatalf("concurrent test err: %s", err)
 		}
 	})
-}
-
-func TestReverseProxy_ServeHTTP2(t *testing.T) {
-	testCases := []struct {
-		name            string
-		allowedNetworks config.Networks
-		expResponse     string
-	}{
-		{
-			name:            "empty allowed networks",
-			allowedNetworks: config.Networks{},
-		},
-		{
-			name:            "allow addr",
-			allowedNetworks: config.Networks{getNetwork("192.0.2.1")},
-		},
-		{
-			name:            "allow addr by mask",
-			allowedNetworks: config.Networks{getNetwork("192.0.2.1/32")},
-		},
-	}
-
-	f := func(cfg *config.Config) {
-		proxy, err := getProxy(cfg)
-		if err != nil {
-			t.Fatalf("unexpected error: %s", err)
-		}
-		resp := makeRequest(proxy)
-		b := bbToString(t, resp.Body)
-		resp.Body.Close()
-		if !strings.Contains(b, okResponse) {
-			t.Fatalf("expected response: %q; got: %q", okResponse, b)
-		}
-	}
-
-	for _, tc := range testCases {
-		t.Run("user "+tc.name, func(t *testing.T) {
-			goodCfg.Users[0].AllowedNetworks = tc.allowedNetworks
-			f(goodCfg)
-		})
-		t.Run("cluster user "+tc.name, func(t *testing.T) {
-			goodCfg.Clusters[0].ClusterUsers[0].AllowedNetworks = tc.allowedNetworks
-			f(goodCfg)
-		})
-	}
-
-	t.Run("cluster user disallow addr", func(t *testing.T) {
-		goodCfg.Clusters[0].ClusterUsers[0].AllowedNetworks = config.Networks{getNetwork("192.0.2.2/32"), getNetwork("192.0.2.2")}
-		proxy, err := getProxy(goodCfg)
-		if err != nil {
-			t.Fatalf("unexpected error: %s", err)
-		}
-		resp := makeRequest(proxy)
-		expected := "cluster user \"web\" is not allowed to access"
-		b := bbToString(t, resp.Body)
-		resp.Body.Close()
-		if !strings.Contains(b, expected) {
-			t.Fatalf("expected response: %q; got: %q", expected, b)
-		}
-	})
-
-	t.Run("user disallow addr", func(t *testing.T) {
-		goodCfg.Users[0].AllowedNetworks = config.Networks{getNetwork("192.0.2.2/32"), getNetwork("192.0.2.2")}
-		proxy, err := getProxy(goodCfg)
-		if err != nil {
-			t.Fatalf("unexpected error: %s", err)
-		}
-		resp := makeRequest(proxy)
-		expected := "user \"default\" is not allowed to access"
-		b := bbToString(t, resp.Body)
-		resp.Body.Close()
-		if !strings.Contains(b, expected) {
-			t.Fatalf("expected response: %q; got: %q", expected, b)
-		}
-	})
-}
-
-func getNetwork(s string) *net.IPNet {
-	if !strings.Contains(s, `/`) {
-		s += "/32"
-	}
-	_, ipnet, _ := net.ParseCIDR(s)
-	return ipnet
 }
 
 const killQueryPattern = "KILL QUERY WHERE query_id"

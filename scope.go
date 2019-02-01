@@ -13,9 +13,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Vertamedia/chproxy/cache"
-	"github.com/Vertamedia/chproxy/config"
-	"github.com/Vertamedia/chproxy/log"
+	"github.com/alexdzyoba/chproxy/cache"
+	"github.com/alexdzyoba/chproxy/config"
+	"github.com/alexdzyoba/chproxy/log"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -437,10 +437,7 @@ type user struct {
 	queueCh      chan struct{}
 	maxQueueTime time.Duration
 
-	allowedNetworks config.Networks
-
 	denyHTTP  bool
-	denyHTTPS bool
 	allowCORS bool
 
 	cache  *cache.Cache
@@ -509,9 +506,7 @@ func (up usersProfile) newUser(u config.User) (*user, error) {
 		reqPerMin:            u.ReqPerMin,
 		queueCh:              queueCh,
 		maxQueueTime:         time.Duration(u.MaxQueueTime),
-		allowedNetworks:      u.AllowedNetworks,
 		denyHTTP:             u.DenyHTTP,
-		denyHTTPS:            u.DenyHTTPS,
 		allowCORS:            u.AllowCORS,
 		cache:                cc,
 		params:               params,
@@ -532,8 +527,6 @@ type clusterUser struct {
 
 	queueCh      chan struct{}
 	maxQueueTime time.Duration
-
-	allowedNetworks config.Networks
 }
 
 func newClusterUser(cu config.ClusterUser) *clusterUser {
@@ -549,7 +542,6 @@ func newClusterUser(cu config.ClusterUser) *clusterUser {
 		reqPerMin:            cu.ReqPerMin,
 		queueCh:              queueCh,
 		maxQueueTime:         time.Duration(cu.MaxQueueTime),
-		allowedNetworks:      cu.AllowedNetworks,
 	}
 }
 
@@ -577,7 +569,7 @@ type replica struct {
 	nextHostIdx uint32
 }
 
-func newReplicas(replicasCfg []config.Replica, nodes []string, scheme string, c *cluster) ([]*replica, error) {
+func newReplicas(replicasCfg []config.Replica, nodes []string, c *cluster) ([]*replica, error) {
 	if len(nodes) > 0 {
 		// No replicas, just flat nodes. Create default replica
 		// containing all the nodes.
@@ -585,7 +577,7 @@ func newReplicas(replicasCfg []config.Replica, nodes []string, scheme string, c 
 			cluster: c,
 			name:    "default",
 		}
-		hosts, err := newNodes(nodes, scheme, r)
+		hosts, err := newNodes(nodes, r)
 		if err != nil {
 			return nil, err
 		}
@@ -599,7 +591,7 @@ func newReplicas(replicasCfg []config.Replica, nodes []string, scheme string, c 
 			cluster: c,
 			name:    rCfg.Name,
 		}
-		hosts, err := newNodes(rCfg.Nodes, scheme, r)
+		hosts, err := newNodes(rCfg.Nodes, r)
 		if err != nil {
 			return nil, fmt.Errorf("cannot initialize replica %q: %s", rCfg.Name, err)
 		}
@@ -609,12 +601,12 @@ func newReplicas(replicasCfg []config.Replica, nodes []string, scheme string, c 
 	return replicas, nil
 }
 
-func newNodes(nodes []string, scheme string, r *replica) ([]*host, error) {
+func newNodes(nodes []string, r *replica) ([]*host, error) {
 	hosts := make([]*host, len(nodes))
 	for i, node := range nodes {
-		addr, err := url.Parse(fmt.Sprintf("%s://%s", scheme, node))
+		addr, err := url.Parse(fmt.Sprintf("http://%s", node))
 		if err != nil {
-			return nil, fmt.Errorf("cannot parse `node` %q with `scheme` %q: %s", node, scheme, err)
+			return nil, fmt.Errorf("cannot parse `node` %q: %s", node, err)
 		}
 		hosts[i] = &host{
 			replica: r,
@@ -734,7 +726,7 @@ func newCluster(c config.Cluster) (*cluster, error) {
 		heartBeatInterval:     time.Duration(c.HeartBeatInterval),
 	}
 
-	replicas, err := newReplicas(c.Replicas, c.Nodes, c.Scheme, newC)
+	replicas, err := newReplicas(c.Replicas, c.Nodes, newC)
 	if err != nil {
 		return nil, fmt.Errorf("cannot initialize replicas: %s", err)
 	}

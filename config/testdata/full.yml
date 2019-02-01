@@ -3,11 +3,6 @@
 # By default debug logs are disabled.
 log_debug: true
 
-# Whether to ignore security checks during config parsing.
-#
-# By default security checks are enabled.
-hack_me_please: true
-
 # Optional response cache configs.
 #
 # Multiple distinct caches with different settings may be configured.
@@ -42,15 +37,6 @@ caches:
     max_size: 100Mb
     expire: 10s
 
-# Optional network lists, might be used as values for `allowed_networks`.
-network_groups:
-  - name: "office"
-    # Each item may contain either IP or IP subnet mask.
-    networks: ["127.0.0.0/24", "10.10.0.1"]
-
-  - name: "reporting-apps"
-    networks: ["10.10.10.0/24"]
-
 # Optional lists of query params to send with each proxied request to ClickHouse.
 # These lists may be used for overriding ClickHouse settings on a per-user basis.
 param_groups:
@@ -84,12 +70,6 @@ server:
     # May be in the form IP:port . IP part is optional.
     listen_addr: ":9090"
 
-    # List of allowed networks or network_groups.
-    # Each item may contain IP address, IP subnet mask or a name
-    # from `network_groups`.
-    # By default requests are accepted from all the IPs.
-    allowed_networks: ["office", "reporting-apps", "1.2.3.4"]
-
     # ReadTimeout is the maximum duration for proxy to reading the entire
     # request, including the body.
     # Default value is 1m
@@ -102,35 +82,6 @@ server:
     # IdleTimeout is the maximum amount of time for proxy to wait for the next request.
     # Default is 10m
     idle_timeout: 20m
-
-  # Configs for input https interface.
-  # The interface works only if this section is present.
-  https:
-    # TCP address to listen to for https.
-    listen_addr: ":443"
-
-    # Paths to TLS cert and key files.
-    # cert_file: "cert_file"
-    # key_file: "key_file"
-
-    # Letsencrypt config.
-    # Certificates are automatically issued and renewed if this section
-    # is present.
-    # There is no need in cert_file and key_file if this section is present.
-    # Autocert requires application to listen on :80 port for certificate generation
-    autocert:
-      # Path to the directory where autocert certs are cached.
-      cache_dir: "certs_dir"
-
-      # The list of host names proxy is allowed to respond to.
-      # See https://godoc.org/golang.org/x/crypto/acme/autocert#HostPolicy
-      allowed_hosts: ["example.com"]
-
-  # Metrics in prometheus format are exposed on the `/metrics` path.
-  # Access to `/metrics` endpoint may be restricted in this section.
-  # By default access to `/metrics` is unrestricted.
-  metrics:
-    allowed_networks: ["office"]
 
 # Configs for input users.
 users:
@@ -189,7 +140,6 @@ users:
   - name: "default"
     to_cluster: "second cluster"
     to_user: "default"
-    allowed_networks: ["office", "1.2.3.0/24"]
 
     # The maximum number of concurrently running queries for the user.
     #
@@ -203,18 +153,10 @@ users:
     # By default there is no limit on the query duration.
     max_execution_time: 1m
 
-    # Whether to deny input requests over HTTPS.
-    deny_https: true
-
 # Configs for ClickHouse clusters.
 clusters:
     # The cluster name is used in `to_cluster`.
   - name: "first cluster"
-
-    # Protocol to use for communicating with cluster nodes.
-    # Currently supported values are `http` or `https`.
-    # By default `http` is used.
-    scheme: "http"
 
     # Cluster node addresses.
     # Requests are evenly distributed among them.
@@ -239,8 +181,6 @@ clusters:
         max_execution_time: 1m
 
   - name: "second cluster"
-    scheme: "https"
-
     # The cluster may contain multiple replicas instead of flat nodes.
     #
     # Chproxy selects the least loaded node among the least loaded replicas.
@@ -261,4 +201,3 @@ clusters:
         requests_per_minute: 10
         max_queue_size: 50
         max_queue_time: 70s
-        allowed_networks: ["office"]

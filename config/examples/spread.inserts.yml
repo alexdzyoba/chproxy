@@ -2,9 +2,6 @@ server:
   http:
       listen_addr: ":9090"
 
-      # Networks with application servers.
-      allowed_networks: ["10.10.1.0/24"]
-
 users:
   - name: "insert"
     to_cluster: "stats-raw"

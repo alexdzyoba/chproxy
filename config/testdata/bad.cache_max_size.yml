@@ -9,7 +9,6 @@ server:
 
 users:
   - name: "dummy"
-    allowed_networks: ["1.2.3.4"]
     to_cluster: "cluster"
     to_user: "default"
 

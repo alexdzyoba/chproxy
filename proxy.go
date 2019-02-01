@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Vertamedia/chproxy/cache"
-	"github.com/Vertamedia/chproxy/config"
-	"github.com/Vertamedia/chproxy/log"
+	"github.com/alexdzyoba/chproxy/cache"
+	"github.com/alexdzyoba/chproxy/config"
+	"github.com/alexdzyoba/chproxy/log"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -476,17 +476,8 @@ func (rp *reverseProxy) getScope(req *http.Request) (*scope, int, error) {
 	if u.password != password {
 		return nil, http.StatusUnauthorized, fmt.Errorf("invalid username or password for user %q", name)
 	}
-	if u.denyHTTP && req.TLS == nil {
+	if u.denyHTTP {
 		return nil, http.StatusForbidden, fmt.Errorf("user %q is not allowed to access via http", u.name)
-	}
-	if u.denyHTTPS && req.TLS != nil {
-		return nil, http.StatusForbidden, fmt.Errorf("user %q is not allowed to access via https", u.name)
-	}
-	if !u.allowedNetworks.Contains(req.RemoteAddr) {
-		return nil, http.StatusForbidden, fmt.Errorf("user %q is not allowed to access", u.name)
-	}
-	if !cu.allowedNetworks.Contains(req.RemoteAddr) {
-		return nil, http.StatusForbidden, fmt.Errorf("cluster user %q is not allowed to access", cu.name)
 	}
 
 	s := newScope(req, u, c, cu)

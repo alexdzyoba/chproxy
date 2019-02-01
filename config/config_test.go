@@ -3,7 +3,6 @@ package config
 import (
 	"bytes"
 	"gopkg.in/yaml.v2"
-	"net"
 	"testing"
 	"time"
 )
@@ -33,41 +32,22 @@ func TestLoadConfig(t *testing.T) {
 						Expire:  Duration(10 * time.Second),
 					},
 				},
-				HackMePlease: true,
 				Server: Server{
 					HTTP: HTTP{
-						ListenAddr:           ":9090",
-						NetworksOrGroups:     []string{"office", "reporting-apps", "1.2.3.4"},
-						ForceAutocertHandler: true,
+						ListenAddr: ":9090",
 						TimeoutCfg: TimeoutCfg{
 							ReadTimeout:  Duration(5 * time.Minute),
 							WriteTimeout: Duration(10 * time.Minute),
 							IdleTimeout:  Duration(20 * time.Minute),
 						},
 					},
-					HTTPS: HTTPS{
-						ListenAddr: ":443",
-						Autocert: Autocert{
-							CacheDir:     "certs_dir",
-							AllowedHosts: []string{"example.com"},
-						},
-						TimeoutCfg: TimeoutCfg{
-							ReadTimeout:  Duration(time.Minute),
-							WriteTimeout: Duration(140 * time.Second),
-							IdleTimeout:  Duration(10 * time.Minute),
-						},
-					},
-					Metrics: Metrics{
-						NetworksOrGroups: []string{"office"},
-					},
 				},
 				LogDebug: true,
 
 				Clusters: []Cluster{
 					{
-						Name:   "first cluster",
-						Scheme: "http",
-						Nodes:  []string{"127.0.0.1:8123", "shard2:8123"},
+						Name:  "first cluster",
+						Nodes: []string{"127.0.0.1:8123", "shard2:8123"},
 						KillQueryUser: KillQueryUser{
 							Name:     "default",
 							Password: "***",
@@ -83,8 +63,7 @@ func TestLoadConfig(t *testing.T) {
 						HeartBeatInterval: Duration(time.Minute),
 					},
 					{
-						Name:   "second cluster",
-						Scheme: "https",
+						Name: "second cluster",
 						Replicas: []Replica{
 							{
 								Name:  "replica1",
@@ -106,7 +85,6 @@ func TestLoadConfig(t *testing.T) {
 								ReqPerMin:            10,
 								MaxConcurrentQueries: 4,
 								MaxExecutionTime:     Duration(10 * time.Second),
-								NetworksOrGroups:     []string{"office"},
 								MaxQueueSize:         50,
 								MaxQueueTime:         Duration(70 * time.Second),
 							},
@@ -168,32 +146,6 @@ func TestLoadConfig(t *testing.T) {
 						ToUser:               "default",
 						MaxConcurrentQueries: 4,
 						MaxExecutionTime:     Duration(time.Minute),
-						DenyHTTPS:            true,
-						NetworksOrGroups:     []string{"office", "1.2.3.0/24"},
-					},
-				},
-				NetworkGroups: []NetworkGroups{
-					{
-						Name: "office",
-						Networks: Networks{
-							&net.IPNet{
-								IP:   net.IPv4(127, 0, 0, 0),
-								Mask: net.IPMask{255, 255, 255, 0},
-							},
-							&net.IPNet{
-								IP:   net.IPv4(10, 10, 0, 1),
-								Mask: net.IPMask{255, 255, 255, 255},
-							},
-						},
-					},
-					{
-						Name: "reporting-apps",
-						Networks: Networks{
-							&net.IPNet{
-								IP:   net.IPv4(10, 10, 10, 0),
-								Mask: net.IPMask{255, 255, 255, 0},
-							},
-						},
 					},
 				},
 			},
@@ -204,8 +156,7 @@ func TestLoadConfig(t *testing.T) {
 			Config{
 				Server: Server{
 					HTTP: HTTP{
-						ListenAddr:       ":8080",
-						NetworksOrGroups: []string{"127.0.0.1"},
+						ListenAddr: ":8080",
 						TimeoutCfg: TimeoutCfg{
 							ReadTimeout:  Duration(time.Minute),
 							WriteTimeout: Duration(time.Minute),
@@ -215,9 +166,8 @@ func TestLoadConfig(t *testing.T) {
 				},
 				Clusters: []Cluster{
 					{
-						Name:   "cluster",
-						Scheme: "http",
-						Nodes:  []string{"127.0.0.1:8123"},
+						Name:  "cluster",
+						Nodes: []string{"127.0.0.1:8123"},
 						ClusterUsers: []ClusterUser{
 							{
 								Name: "default",
@@ -295,76 +245,6 @@ func TestBadConfig(t *testing.T) {
 			"`cluster.nodes` cannot be simultaneously set with `cluster.replicas` for \"second cluster\"",
 		},
 		{
-			"wrong scheme",
-			"testdata/bad.wrong_scheme.yml",
-			"`cluster.scheme` must be `http` or `https`, got \"tcp\" instead for \"second cluster\"",
-		},
-		{
-			"empty https",
-			"testdata/bad.empty_https.yml",
-			"configuration `https` is missing. Must be specified `https.cache_dir` for autocert OR `https.key_file` and `https.cert_file` for already existing certs",
-		},
-		{
-			"empty https cert key",
-			"testdata/bad.empty_https_key_file.yml",
-			"`https.key_file` must be specified",
-		},
-		{
-			"double certification",
-			"testdata/bad.double_certification.yml",
-			"it is forbidden to specify certificate and `https.autocert` at the same time. Choose one way",
-		},
-		{
-			"security no password",
-			"testdata/bad.security_no_pass.yml",
-			"security breach: https: user \"dummy\" has neither password nor `allowed_networks` on `user` or `server.http` level" +
-				"\nSet option `hack_me_please=true` to disable security errors",
-		},
-		{
-			"security no allowed networks",
-			"testdata/bad.security_no_an.yml",
-			"security breach: http: user \"dummy\" is allowed to connect via http, but not limited by `allowed_networks` " +
-				"on `user` or `server.http` level - password could be stolen" +
-				"\nSet option `hack_me_please=true` to disable security errors",
-		},
-		{
-			"allow all",
-			"testdata/bad.allow_all.yml",
-			"suspicious mask specified \"0.0.0.0/0\". " +
-				"If you want to allow all then just omit `allowed_networks` field",
-		},
-		{
-			"deny all",
-			"testdata/bad.deny_all.yml",
-			"`deny_http` and `deny_https` cannot be simultaneously set to `true` for \"dummy\"",
-		},
-		{
-			"autocert allowed networks",
-			"testdata/bad.autocert_an.yml",
-			"`letsencrypt` specification requires https server to be without `allowed_networks` limits. " +
-				"Otherwise, certificates will be impossible to generate",
-		},
-		{
-			"incorrect network group name",
-			"testdata/bad.network_groups.yml",
-			"wrong network group name or address \"office\": invalid CIDR address: office/32",
-		},
-		{
-			"empty network group name",
-			"testdata/bad.network_groups.name.yml",
-			"`network_group.name` must be specified",
-		},
-		{
-			"empty network group networks",
-			"testdata/bad.network_groups.networks.yml",
-			"`network_group.networks` must contain at least one network",
-		},
-		{
-			"double network group",
-			"testdata/bad.double_network_groups.yml",
-			"duplicate `network_groups.name` \"office\"",
-		},
-		{
 			"max queue size and time on user",
 			"testdata/bad.queue_size_time_user.yml",
 			"`max_queue_size` must be set if `max_queue_time` is set for \"default\"",
@@ -420,10 +300,6 @@ func TestExamples(t *testing.T) {
 		{
 			"spread selects",
 			"examples/spread.selects.yml",
-		},
-		{
-			"https",
-			"examples/https.yml",
 		},
 		{
 			"combined",

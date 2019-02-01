@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Vertamedia/chproxy/chdecompressor"
-	"github.com/Vertamedia/chproxy/log"
+	"github.com/alexdzyoba/chproxy/chdecompressor"
+	"github.com/alexdzyoba/chproxy/log"
 )
 
 func respondWith(rw http.ResponseWriter, err error, status int) {

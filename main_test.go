@@ -10,17 +10,14 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/Vertamedia/chproxy/cache"
-	"github.com/Vertamedia/chproxy/config"
-	"github.com/Vertamedia/chproxy/log"
+	"github.com/alexdzyoba/chproxy/config"
+	"github.com/alexdzyoba/chproxy/log"
 )
 
 var testDir = "./temp-test-data"
@@ -42,178 +39,6 @@ func TestServe(t *testing.T) {
 		testFn   func(t *testing.T)
 		listenFn func() (net.Listener, chan struct{})
 	}{
-		{
-			"https request",
-			"testdata/https.yml",
-			func(t *testing.T) {
-				req, err := http.NewRequest("GET", "https://127.0.0.1:8443?query=asd", nil)
-				checkErr(t, err)
-				resp, err := tlsClient.Do(req)
-				checkErr(t, err)
-				if resp.StatusCode != http.StatusUnauthorized {
-					t.Fatalf("unexpected status code: %d; expected: %d", resp.StatusCode, http.StatusUnauthorized)
-				}
-				resp.Body.Close()
-
-				req, err = http.NewRequest("GET", "https://127.0.0.1:8443?query=asd", nil)
-				checkErr(t, err)
-				req.SetBasicAuth("default", "qwerty")
-				resp, err = tlsClient.Do(req)
-				checkErr(t, err)
-				if resp.StatusCode != http.StatusOK {
-					t.Fatalf("unexpected status code: %d; expected: %d", resp.StatusCode, http.StatusOK)
-				}
-				resp.Body.Close()
-			},
-			startTLS,
-		},
-		{
-			"https cache",
-			"testdata/https.cache.yml",
-			func(t *testing.T) {
-				// do request which response must be cached
-				q := "SELECT 123"
-				req, err := http.NewRequest("GET", "https://127.0.0.1:8443?query="+url.QueryEscape(q), nil)
-				checkErr(t, err)
-				req.SetBasicAuth("default", "qwerty")
-				resp, err := tlsClient.Do(req)
-				checkErr(t, err)
-				if resp.StatusCode != http.StatusOK {
-					t.Fatalf("unexpected status code: %d; expected: %d", resp.StatusCode, http.StatusOK)
-				}
-				resp.Body.Close()
-
-				// check cached response
-				key := &cache.Key{
-					Query:          []byte(q),
-					AcceptEncoding: "gzip",
-				}
-				path := fmt.Sprintf("%s/cache/%s", testDir, key.String())
-				if _, err := os.Stat(path); err != nil {
-					t.Fatalf("err while getting file %q info: %s", path, err)
-				}
-				rw := httptest.NewRecorder()
-				cc := proxy.caches["https_cache"]
-				if err := cc.WriteTo(rw, key); err != nil {
-					t.Fatalf("unexpected error while writing reposnse from cache: %s", err)
-				}
-				expected := "Ok.\n"
-				checkResponse(t, rw.Body, expected)
-			},
-			startTLS,
-		},
-		{
-			"bad https cache",
-			"testdata/https.cache.yml",
-			func(t *testing.T) {
-				// do request which cause an error
-				q := "SELECT ERROR"
-				req, err := http.NewRequest("GET", "https://127.0.0.1:8443?query="+url.QueryEscape(q), nil)
-				checkErr(t, err)
-				req.SetBasicAuth("default", "qwerty")
-				resp, err := tlsClient.Do(req)
-				checkErr(t, err)
-				if resp.StatusCode != http.StatusTeapot {
-					t.Fatalf("unexpected status code: %d; expected: %d", resp.StatusCode, http.StatusTeapot)
-				}
-				resp.Body.Close()
-
-				// check cached response
-				key := &cache.Key{
-					Query:          []byte(q),
-					AcceptEncoding: "gzip",
-				}
-				path := fmt.Sprintf("%s/cache/%s", testDir, key.String())
-				if _, err := os.Stat(path); !os.IsNotExist(err) {
-					t.Fatalf("err while getting file %q info: %s", path, err)
-				}
-
-				// check refreshCacheMetrics()
-				req, err = http.NewRequest("GET", "https://127.0.0.1:8443/metrics", nil)
-				checkErr(t, err)
-				resp, err = tlsClient.Do(req)
-				if err != nil {
-					t.Fatalf("unexpected error while doing request: %s", err)
-				}
-				if resp.StatusCode != http.StatusOK {
-					t.Fatalf("unexpected status code: %d; expected: %d", resp.StatusCode, http.StatusOK)
-				}
-				resp.Body.Close()
-			},
-			startTLS,
-		},
-		{
-			"deny https",
-			"testdata/https.deny.https.yml",
-			func(t *testing.T) {
-				req, err := http.NewRequest("GET", "https://127.0.0.1:8443?query=asd", nil)
-				checkErr(t, err)
-				req.SetBasicAuth("default", "qwerty")
-				resp, err := tlsClient.Do(req)
-				checkErr(t, err)
-				if resp.StatusCode != http.StatusForbidden {
-					t.Fatalf("unexpected status code: %d; expected: %d", resp.StatusCode, http.StatusForbidden)
-				}
-				expected := "user \"default\" is not allowed to access via https"
-				checkResponse(t, resp.Body, expected)
-				resp.Body.Close()
-			},
-			startTLS,
-		},
-		{
-			"https networks",
-			"testdata/https.networks.yml",
-			func(t *testing.T) {
-				req, err := http.NewRequest("GET", "https://127.0.0.1:8443?query=asd", nil)
-				checkErr(t, err)
-				req.SetBasicAuth("default", "qwerty")
-				resp, err := tlsClient.Do(req)
-				checkErr(t, err)
-				if resp.StatusCode != http.StatusForbidden {
-					t.Fatalf("unexpected status code: %d; expected: %d", resp.StatusCode, http.StatusForbidden)
-				}
-				expected := "https connections are not allowed from 127.0.0.1"
-				checkResponse(t, resp.Body, expected)
-				resp.Body.Close()
-			},
-			startTLS,
-		},
-		{
-			"https user networks",
-			"testdata/https.user.networks.yml",
-			func(t *testing.T) {
-				req, err := http.NewRequest("GET", "https://127.0.0.1:8443?query=asd", nil)
-				checkErr(t, err)
-				req.SetBasicAuth("default", "qwerty")
-				resp, err := tlsClient.Do(req)
-				checkErr(t, err)
-				if resp.StatusCode != http.StatusForbidden {
-					t.Fatalf("unexpected status code: %d; expected: %d", resp.StatusCode, http.StatusForbidden)
-				}
-				expected := "user \"default\" is not allowed to access"
-				checkResponse(t, resp.Body, expected)
-				resp.Body.Close()
-			},
-			startTLS,
-		},
-		{
-			"https cluster user networks",
-			"testdata/https.cluster.user.networks.yml",
-			func(t *testing.T) {
-				req, err := http.NewRequest("GET", "https://127.0.0.1:8443?query=asd", nil)
-				checkErr(t, err)
-				req.SetBasicAuth("default", "qwerty")
-				resp, err := tlsClient.Do(req)
-				checkErr(t, err)
-				if resp.StatusCode != http.StatusForbidden {
-					t.Fatalf("unexpected status code: %d; expected: %d", resp.StatusCode, http.StatusForbidden)
-				}
-				expected := "cluster user \"web\" is not allowed to access"
-				checkResponse(t, resp.Body, expected)
-				resp.Body.Close()
-			},
-			startTLS,
-		},
 		{
 			"routing",
 			"testdata/http.yml",
@@ -326,68 +151,6 @@ func TestServe(t *testing.T) {
 			startHTTP,
 		},
 		{
-			"http networks",
-			"testdata/http.networks.yml",
-			func(t *testing.T) {
-				resp := httpGet(t, "http://127.0.0.1:9090?query=asd", http.StatusForbidden)
-				expected := "http connections are not allowed from 127.0.0.1"
-				checkResponse(t, resp.Body, expected)
-				resp.Body.Close()
-			},
-			startHTTP,
-		},
-		{
-			"http metrics networks",
-			"testdata/http.metrics.networks.yml",
-			func(t *testing.T) {
-				resp := httpGet(t, "http://127.0.0.1:9090/metrics", http.StatusForbidden)
-				expected := "connections to /metrics are not allowed from 127.0.0.1"
-				checkResponse(t, resp.Body, expected)
-				resp.Body.Close()
-			},
-			startHTTP,
-		},
-		{
-			"http user networks",
-			"testdata/http.user.networks.yml",
-			func(t *testing.T) {
-				resp := httpGet(t, "http://127.0.0.1:9090?query=asd", http.StatusForbidden)
-				expected := "user \"default\" is not allowed to access"
-				checkResponse(t, resp.Body, expected)
-				resp.Body.Close()
-			},
-			startHTTP,
-		},
-		{
-			"http cluster user networks",
-			"testdata/http.cluster.user.networks.yml",
-			func(t *testing.T) {
-				resp := httpGet(t, "http://127.0.0.1:9090?query=asd", http.StatusForbidden)
-				expected := "cluster user \"web\" is not allowed to access"
-				checkResponse(t, resp.Body, expected)
-				resp.Body.Close()
-			},
-			startHTTP,
-		},
-		{
-			"http shared cache",
-			"testdata/http.shared.cache.yml",
-			func(t *testing.T) {
-				// actually we can check that cache-file is shared via metrics
-				// but it needs additional library for doing this
-				// so it would be just files amount check
-				cacheDir := "temp-test-data/shared_cache"
-				checkFilesCount(t, cacheDir, 0)
-				httpGet(t, "http://127.0.0.1:9090?query=SELECT&user=user1", http.StatusOK)
-				checkFilesCount(t, cacheDir, 1)
-				httpGet(t, "http://127.0.0.1:9090?query=SELECT&user=user2", http.StatusOK)
-				// request from different user expected to be served with already cached,
-				// so count of files should be the same
-				checkFilesCount(t, cacheDir, 1)
-			},
-			startHTTP,
-		},
-		{
 			"http cached gzipped deadline",
 			"testdata/http.cache.deadline.yml",
 			func(t *testing.T) {
@@ -486,29 +249,6 @@ var tlsClient = &http.Client{Transport: &http.Transport{
 	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 }}
 
-func startTLS() (net.Listener, chan struct{}) {
-	cfg, err := loadConfig()
-	if err != nil {
-		panic(fmt.Sprintf("error while loading config: %s", err))
-	}
-	if err = applyConfig(cfg); err != nil {
-		panic(fmt.Sprintf("error while applying config: %s", err))
-	}
-	done := make(chan struct{})
-	ln, err := net.Listen("tcp4", cfg.Server.HTTPS.ListenAddr)
-	if err != nil {
-		panic(fmt.Sprintf("cannot listen for %q: %s", cfg.Server.HTTPS.ListenAddr, err))
-	}
-	tlsCfg := newTLSConfig(cfg.Server.HTTPS)
-	tln := tls.NewListener(ln, tlsCfg)
-	h := http.HandlerFunc(serveHTTP)
-	go func() {
-		listenAndServe(tln, h, config.TimeoutCfg{})
-		close(done)
-	}()
-	return tln, done
-}
-
 func startHTTP() (net.Listener, chan struct{}) {
 	cfg, err := loadConfig()
 	if err != nil {
@@ -599,35 +339,6 @@ func (s *stateCH) sleep() {
 	s.inited = true
 	s.Unlock()
 	<-s.syncCH
-}
-
-func TestNewTLSConfig(t *testing.T) {
-	cfg := config.HTTPS{
-		KeyFile:  "testdata/example.com.key",
-		CertFile: "testdata/example.com.cert",
-	}
-
-	tlsCfg := newTLSConfig(cfg)
-	if len(tlsCfg.Certificates) < 1 {
-		t.Fatalf("expected tls certificate; got empty list")
-	}
-
-	certCachePath := fmt.Sprintf("%s/certs_dir", testDir)
-	cfg = config.HTTPS{
-		Autocert: config.Autocert{
-			CacheDir:     certCachePath,
-			AllowedHosts: []string{"example.com"},
-		},
-	}
-	autocertManager = newAutocertManager(cfg.Autocert)
-	tlsCfg = newTLSConfig(cfg)
-	if tlsCfg.GetCertificate == nil {
-		t.Fatalf("expected func GetCertificate be set; got nil")
-	}
-
-	if _, err := os.Stat(certCachePath); err != nil {
-		t.Fatalf("expected dir %s to be created", certCachePath)
-	}
 }
 
 func TestReloadConfig(t *testing.T) {

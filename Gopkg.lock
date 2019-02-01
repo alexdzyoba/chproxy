@@ -2,93 +2,114 @@
 
 
 [[projects]]
+  digest = "1:29b1e6604e762715716cae79145c8732a964b8fe564cc330de1495090fbc777a"
   name = "github.com/DataDog/zstd"
   packages = ["."]
-  revision = "aebefd9fcb99f22cd691ef778a12ed68f0e6a1ab"
-  version = "v1.3.4"
+  pruneopts = ""
+  revision = "c7161f8c63c045cbc7ca051dcc969dd0e4054de2"
+  version = "v1.3.5"
 
 [[projects]]
   branch = "master"
+  digest = "1:c0bec5f9b98d0bc872ff5e834fac186b807b656683bd29cb82fb207a1513fabb"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
-  revision = "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9"
+  pruneopts = ""
+  revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
-  branch = "master"
+  digest = "1:3dd078fda7500c341bc26cfbc6c6a34614f295a2457149fc1045cab767cbcf18"
   name = "github.com/golang/protobuf"
   packages = ["proto"]
-  revision = "1e59b77b52bf8e4b449a57e6f79f21226d571845"
+  pruneopts = ""
+  revision = "aa810b61a9c79d51363740d207bb46cf8e620ed5"
+  version = "v1.2.0"
 
 [[projects]]
+  digest = "1:63722a4b1e1717be7b98fc686e0b30d5e7f734b9e93d7dee86293b6deab7ea28"
   name = "github.com/matttproud/golang_protobuf_extensions"
   packages = ["pbutil"]
-  revision = "3247c84500bff8d9fb6d579d800f20b3e091582c"
-  version = "v1.0.0"
+  pruneopts = ""
+  revision = "c12348ce28de40eed0136aa2b644d0ee0650e56c"
+  version = "v1.0.1"
 
 [[projects]]
+  digest = "1:52b8f1dc01c8a930900aa94e227b0c4c36e7102a5b124687ff1f88a221590234"
   name = "github.com/pierrec/lz4"
   packages = ["."]
+  pruneopts = ""
   revision = "2fcda4cb7018ce05a25959d2fe08c83e3329f169"
   version = "v1.1"
 
 [[projects]]
+  digest = "1:ff95a6c61f34f32e57833783059c80274d84e9c74e6e315c3dc2e93e9bf3dab9"
   name = "github.com/pierrec/xxHash"
   packages = ["xxHash32"]
+  pruneopts = ""
   revision = "f051bb7f1d1aaf1b5a665d74fb6b0217712c69f7"
   version = "v0.1.1"
 
 [[projects]]
+  digest = "1:4142d94383572e74b42352273652c62afec5b23f325222ed09198f46009022d1"
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
-    "prometheus/promhttp"
+    "prometheus/promhttp",
   ]
+  pruneopts = ""
   revision = "c5b7fccd204277076155f10851dad72b76a49317"
   version = "v0.8.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:cd67319ee7536399990c4b00fae07c3413035a53193c644549a676091507cadc"
   name = "github.com/prometheus/client_model"
   packages = ["go"]
-  revision = "99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c"
+  pruneopts = ""
+  revision = "fd36f4220a901265f90734c3183c5f0c91daa0b8"
 
 [[projects]]
-  branch = "master"
+  digest = "1:96af18a3819d2ff7d6aa07e6e50955b11e477dbc8b890324c67462b84adca56b"
   name = "github.com/prometheus/common"
   packages = [
     "expfmt",
     "internal/bitbucket.org/ww/goautoneg",
-    "model"
+    "model",
   ]
-  revision = "2e54d0b93cba2fd133edc32211dcc32c06ef72ca"
+  pruneopts = ""
+  revision = "cfeb6f9992ffa54aaa4f2170ade4067ee478b250"
+  version = "v0.2.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:33a118fabeac2e4f461db5159c4954469550e31c07653e05ddd5ab774cf67f1b"
   name = "github.com/prometheus/procfs"
   packages = [
     ".",
-    "xfs"
+    "internal/util",
+    "nfs",
+    "xfs",
   ]
-  revision = "8f918ac9ab4be3a790338bda8624fec5d71260b3"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/crypto"
-  packages = [
-    "acme",
-    "acme/autocert"
-  ]
-  revision = "1875d0a70c90e57f11972aefd42276df65e895b9"
+  pruneopts = ""
+  revision = "316cf8ccfec56d206735d46333ca162eb374da8b"
 
 [[projects]]
   branch = "v2"
+  digest = "1:cedccf16b71e86db87a24f8d4c70b0a855872eb967cb906a66b95de56aefbd0d"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "287cf08546ab5e7e37d55a84f7ed3fd1db036de5"
+  pruneopts = ""
+  revision = "51d6538a90f86fe93ac480b35f37b2be17fef232"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9bc7ebcef62912805effe1c9d26b6b90c24efc79839d2c40181a6ec092d0f316"
+  input-imports = [
+    "github.com/DataDog/zstd",
+    "github.com/pierrec/lz4",
+    "github.com/prometheus/client_golang/prometheus",
+    "github.com/prometheus/client_golang/prometheus/promhttp",
+    "gopkg.in/yaml.v2",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1

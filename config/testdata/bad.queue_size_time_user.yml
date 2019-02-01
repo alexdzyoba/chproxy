@@ -1,7 +1,6 @@
 server:
   http:
     listen_addr: ":8080"
-    allowed_networks: ["127.0.0.1"]
 
 users:
   - name: "default"

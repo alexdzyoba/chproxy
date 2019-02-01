@@ -1,4 +1,3 @@
-hack_me_please: true
 server:
   http:
     listen_addr: ":8080"
