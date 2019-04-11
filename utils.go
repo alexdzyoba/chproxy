@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alexdzyoba/chproxy/chdecompressor"
 	"github.com/alexdzyoba/chproxy/log"
 )
 
@@ -204,9 +203,6 @@ func getDecompressor(req *http.Request) decompressor {
 	if req.Header.Get("Content-Encoding") == "gzip" {
 		return gzipDecompressor{}
 	}
-	if req.URL.Query().Get("decompress") == "1" {
-		return chDecompressor{}
-	}
 	return nil
 }
 
@@ -222,11 +218,4 @@ func (dc gzipDecompressor) decompress(r io.Reader) ([]byte, error) {
 		return nil, fmt.Errorf("cannot ungzip query: %s", err)
 	}
 	return ioutil.ReadAll(gr)
-}
-
-type chDecompressor struct{}
-
-func (dc chDecompressor) decompress(r io.Reader) ([]byte, error) {
-	lr := chdecompressor.NewReader(r)
-	return ioutil.ReadAll(lr)
 }
